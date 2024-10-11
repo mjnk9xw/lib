@@ -1,10 +1,12 @@
 package common
 
 import (
-	"github.com/google/uuid"
-	"github.com/sendgrid/rest"
+	"context"
 	"reflect"
 	"testing"
+
+	"github.com/google/uuid"
+	"github.com/sendgrid/rest"
 )
 
 func TestTransformString(t *testing.T) {
@@ -69,13 +71,13 @@ func TestSendRestAPI(t *testing.T) {
 		"x-user-id": "7b0a4a54-65f2-40cf-9b16-b2ab044320be",
 	}
 	type PromotionBody struct {
-		Name             *string     `json:"name" valid:"Required"`
-		PromotionCode    *string     `json:"promotion_code" valid:"Required"`
-		Type             *string     `json:"type" valid:"Required"`
-		Value            *float64    `json:"value" valid:"Required"`
-		BusinessId       *uuid.UUID  `json:"business_id" valid:"Required"`
+		Name          *string    `json:"name" valid:"Required"`
+		PromotionCode *string    `json:"promotion_code" valid:"Required"`
+		Type          *string    `json:"type" valid:"Required"`
+		Value         *float64   `json:"value" valid:"Required"`
+		BusinessId    *uuid.UUID `json:"business_id" valid:"Required"`
 	}
-	
+
 	res := PromotionBody{
 		Name:          StringPointer("a"),
 		PromotionCode: nil,
@@ -83,7 +85,7 @@ func TestSendRestAPI(t *testing.T) {
 		Value:         nil,
 		BusinessId:    nil,
 	}
-	
+
 	type args struct {
 		url        string
 		method     rest.Method
@@ -105,11 +107,11 @@ func TestSendRestAPI(t *testing.T) {
 			header     map[string]string
 			queryParam map[string]string
 			bodyInput  interface{}
-		}{ url: "http://localhost:8081/api/promotion", method: "POST", header:hearder , queryParam: nil, bodyInput:res } , wantBody: "" , wantHeaders:nil , wantErr:true},
+		}{url: "http://localhost:8081/api/promotion", method: "POST", header: hearder, queryParam: nil, bodyInput: res}, wantBody: "", wantHeaders: nil, wantErr: true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotBody, gotHeaders, err := SendRestAPI(tt.args.url, tt.args.method, tt.args.header, tt.args.queryParam, tt.args.bodyInput)
+			gotBody, gotHeaders, err := SendRestAPI(context.Background(), tt.args.url, tt.args.method, tt.args.header, tt.args.queryParam, tt.args.bodyInput)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("SendRestAPI() error = %v, wantErr %v", err, tt.wantErr)
 				return

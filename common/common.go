@@ -1,20 +1,23 @@
 package common
 
 import (
+	"context"
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
-	"github.com/astaxie/beego/logs"
-	"github.com/astaxie/beego/validation"
-	"github.com/google/uuid"
-	"github.com/sendgrid/rest"
-	"golang.org/x/text/transform"
-	"golang.org/x/text/unicode/norm"
 	"net/http"
 	"reflect"
 	"strings"
 	"time"
 	"unicode"
+
+	"github.com/astaxie/beego/logs"
+	"github.com/astaxie/beego/validation"
+	"github.com/google/uuid"
+	"github.com/sendgrid/rest"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"golang.org/x/text/transform"
+	"golang.org/x/text/unicode/norm"
 )
 
 type Time struct {
@@ -87,7 +90,8 @@ func CheckRequireValid(ob interface{}) error {
 	return nil
 }
 
-func SendRestAPI(url string, method rest.Method, header map[string]string, queryParam map[string]string, bodyInput interface{}) (body string, headers map[string][]string, err error) {
+func SendRestAPI(ctx context.Context, url string, method rest.Method, header map[string]string, queryParam map[string]string, bodyInput interface{}) (body string, headers map[string][]string, err error) {
+	rest.DefaultClient.HTTPClient.Transport = otelhttp.NewTransport(http.DefaultTransport)
 	request := rest.Request{
 		Method:      method,
 		BaseURL:     url,
@@ -101,14 +105,14 @@ func SendRestAPI(url string, method rest.Method, header map[string]string, query
 		}
 		request.Body = bodyData
 	}
-	response, err := rest.Send(request)
+	response, err := rest.SendWithContext(ctx, request)
 	if err != nil {
 		return body, headers, err
 	} else {
 		if response.StatusCode != http.StatusOK && response.StatusCode != http.StatusCreated && response.StatusCode != http.StatusNoContent {
 			// parsing error
 			r := map[string]interface{}{}
-			_ = json.Unmarshal([]byte(response.Body),&r)
+			_ = json.Unmarshal([]byte(response.Body), &r)
 			return "", nil, fmt.Errorf("%v", r)
 		} else {
 			return response.Body, response.Headers, nil
@@ -193,7 +197,7 @@ type ConsumersKongAResponse struct {
 
 type ConsumersKongA struct {
 	Consumer interface{} `json:"consumer"`
-	Id uuid.UUID `json:"id"`
-	Group string `json:"group"`
-	Tags string  `json:"tags"`
+	Id       uuid.UUID   `json:"id"`
+	Group    string      `json:"group"`
+	Tags     string      `json:"tags"`
 }
